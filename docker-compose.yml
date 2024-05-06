@@ -1,0 +1,41 @@
+version: "3.9"
+
+name: gymlog_service
+
+services:
+  api:
+    container_name: "api_container"
+    depends_on:
+      - db
+    build:
+      context: .
+      dockerfile: ./docker/api/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/api/app
+    working_dir: /api
+    command: poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+  db:
+    container_name: "mysql_container"
+    build:
+      context: .
+      dockerfile: ./docker/db/Dockerfile
+    restart: always
+    tty: true
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-volume:/var/lib/mysql
+      - ./db/initdb.d:/docker-entrypoint-initdb.d
+      - ./docker/db/conf.d:/etc/mysql/conf.d/my.cnf
+    environment:
+      MYSQL_DATABASE: ${DATABASE_NAME}
+      MYSQL_USER: ${DATABASE_USER}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD}
+      APP_ENV: "development"
+      TZ: "Asia/Tokyo"
+
+volumes:
+  db-volume:

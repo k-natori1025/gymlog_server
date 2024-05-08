@@ -1,11 +1,18 @@
 import os
 import dotenv
+from dotenv import load_dotenv
+from pathlib import Path
+
+# TODO: envファイルをappの外に置いても環境変数を取得できるようにする 
+# env_path = Path(__file__).parent / '.env'
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 
 
 def _getenv(key: str):
   env = os.getenv(key)
+  if env is None:
+        raise ValueError(f"環境変数 {key} が設定されていません。")
   return env
 
 

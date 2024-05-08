@@ -20,8 +20,6 @@ def read_root():
 #　テストユーザー情報一覧取得
 @app.get("/test_users")
 def get_user_list(db: Session = Depends(get_db)):
-    print("@@@@@@@@@@@")
-    print(Env.DATABASE_USER)
     users = db.query(TestUserTable).all()
     return users
 

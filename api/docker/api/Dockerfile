@@ -14,9 +14,9 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 # Poetryのインストール 
 RUN pip install --no-cache-dir poetry
 
-COPY pyproject.toml poetry.lock /api/
+COPY pyproject.toml poetry.lock /app/
 
-COPY app /api/app
+COPY . /api
 
 # 依存関係のみをインストール
 RUN poetry install --no-root

@@ -14,6 +14,6 @@ _database_url = URL.create(
 )
 
 Engine = create_engine(_database_url, encoding="utf-8", echo=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=Engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=True, bind=Engine)
 Base = declarative_base()
 

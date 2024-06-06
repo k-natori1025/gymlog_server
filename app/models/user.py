@@ -1,12 +1,10 @@
 import datetime
-from typing import Optional, List
-from pydantic import BaseModel
-from sqlalchemy import Column, ForeignKey, DateTime, BigInteger, String, Boolean
+from sqlalchemy import Column, DateTime, BigInteger, String
 from app.settings.database import Base
 
 
 class UserOrm(Base):
-  __tablename__ = "user"
+  __tablename__ = "users"
 
   id = Column(BigInteger, primary_key=True, nullable=False)
   name = Column(String(255), nullable=False)

@@ -5,20 +5,20 @@ RUN apt update \
   && apt install --no-install-recommends -y tzdata \
   && apt clean
 
-WORKDIR /app/
-
 # タイムゾーンを日本時間に設定
 ENV TZ=Asia/Tokyo
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Poetryのインストール 
-RUN pip install --no-cache-dir poetry
+WORKDIR /api
 
-COPY pyproject.toml poetry.lock /app/
+# dockerのapiディレクトリにローカルのpyproject.toml poetry.lockをcopy
+COPY pyproject.toml poetry.lock ./
 
-COPY . /app
+RUN pip install --no-root
 
-# 依存関係のみをインストール
-RUN poetry install --no-root --no-interaction --no-ansi
+# ローカルのappディレクトリをdockerのapi内にcopy
+COPY ../../app .
+
+RUN poetry install
 
 CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

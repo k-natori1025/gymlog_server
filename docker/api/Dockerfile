@@ -14,11 +14,10 @@ WORKDIR /api
 # dockerのapiディレクトリにローカルのpyproject.toml poetry.lockをcopy
 COPY pyproject.toml poetry.lock ./
 
-RUN pip install --no-root
-
 # ローカルのappディレクトリをdockerのapi内にcopy
-COPY ../../app .
+COPY app ./app
 
+RUN pip install poetry
 RUN poetry install
 
 CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

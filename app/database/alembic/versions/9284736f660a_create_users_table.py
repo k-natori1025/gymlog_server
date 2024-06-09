@@ -21,15 +21,15 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         'users',
-        sa.Column('id', sa.BigInteger, primary_key=True, nullable=False),
+        sa.Column('id', sa.BigInteger, primary_key=True, nullable=False, autoincrement=True),
         sa.Column('name', sa.String(255), nullable=False),
         sa.Column('email', sa.String(255), nullable=False),
+        sa.Column('password', sa.String(255), nullable=False),
         sa.Column('created_at', sa.DateTime, nullable=False, default=sa.func.current_timestamp()),
         sa.Column('updated_at', sa.DateTime, nullable=False, default=sa.func.current_timestamp(), onupdate=sa.func.current_timestamp()),
         sa.Column('deleted_at', sa.DateTime, nullable=True)
     )
-    pass
 
 
 def downgrade() -> None:
-    pass
+    op.drop_table('users')

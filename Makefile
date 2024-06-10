@@ -15,4 +15,6 @@ app-migrate:
 
 setup:
 	@make up
+	@echo "Waiting for containers to start..."
+	@sleep 30
 	@make app-migrate

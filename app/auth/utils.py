@@ -42,8 +42,5 @@ def verify_firebase_token(token: str):
         print(f"Error verifying Firebase token: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid Firebase token")
 
-def create_session_cookie(user_id: int) -> str:
-    print(f"ユーザーID:{user_id}")
-    session_id = secrets.token_hex(32)
-    print(f"セッションID:{session_id}")
-    return session_id
+def create_session_cookie(token: str, expires_in) -> str:
+    return firebase_auth.create_session_cookie(token, expires_in=expires_in)

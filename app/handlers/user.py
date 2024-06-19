@@ -32,6 +32,12 @@ async def login_user(
     db: Session = Depends(get_db),
     login_user_usecase: LoginUserUsecase = Depends()
 ):
-    print(f"credentials: {credentials.credentials}")
     response = await login_user_usecase.exec(response, db, token=credentials.credentials)
     return response
+
+@router.post("/logout", tags=["ユーザー"], summary="ログアウト")
+async def logout(
+    response: Response
+):
+    response.delete_cookie(key="session")
+    return {"message": "Successfully logged out"}

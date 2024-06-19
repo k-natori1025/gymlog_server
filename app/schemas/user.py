@@ -6,7 +6,7 @@ class UserBase(BaseModel):
     name: str
     email: str
     class Config:
-            orm_mode = True
+        orm_mode = True
 
 class UserRegisterRequest(UserBase):
     password: str
@@ -24,17 +24,19 @@ class User(UserBase):
     updated_at: datetime
     deleted_at: Optional[datetime] = None
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
+class TokenForm(BaseModel):
+    token: str
 
 class TokenData(BaseModel):
     name: Union[str, None] = None
 
 class User(BaseModel):
+    id: int
     name: str
     email: Union[str, None] = None
     disabled: Union[bool, None] = None
+    class Config:
+        orm_mode = True
 
 class UserInDB(User):
     hashed_password: str

@@ -17,6 +17,9 @@ COPY pyproject.toml poetry.lock ./
 # ローカルのappディレクトリをdockerのapi内にcopy
 COPY app ./app
 
+# 環境変数を設定
+ENV PYTHONPATH=/api
+
 RUN pip install poetry
 RUN poetry install
 

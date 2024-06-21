@@ -12,15 +12,13 @@ class LoginUserUsecase:
         try:
             decoded_token = verify_firebase_token(token)
             expires_in = timedelta(days=5)
-            session_cookie = create_session_cookie(token, expires_in)
-            print(f"トークン：{token}")
-            print(f"セッションクッキー：{session_cookie}")
+            session_cookie = create_session_cookie(token, expires_in)            
             expires = datetime.now(timezone.utc) + expires_in
-            print(f"期限:{expires}")
             email = decoded_token.get('email')
             user = await self.user_repo.get_current_user(db, email)
             if user is None:
                 raise HTTPException(status_code=404, detail="User not found")
+            # セッションクッキーをレスポンスに設定
             response.set_cookie(
                 key="session",
                 value=session_cookie,

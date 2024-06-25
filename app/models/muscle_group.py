@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String
 from app.settings.database import Base
 
-class MuscleGroup(Base):
+class MuscleGroupOrm(Base):
     __tablename__ = "muscle_groups"
 
     id = Column(Integer, primary_key=True, index=True)

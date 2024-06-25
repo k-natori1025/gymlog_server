@@ -23,6 +23,7 @@ def upgrade() -> None:
         'users',
         sa.Column('id', sa.BigInteger, primary_key=True, nullable=False, autoincrement=True),
         sa.Column('name', sa.String(255), unique=True, nullable=False),
+        sa.Column('email', sa.String(255), unique=True, nullable=False),
         sa.Column('password', sa.String(255), nullable=False),
         sa.Column('created_at', sa.DateTime, nullable=False, default=sa.func.current_timestamp()),
         sa.Column('updated_at', sa.DateTime, nullable=False, default=sa.func.current_timestamp(), onupdate=sa.func.current_timestamp()),

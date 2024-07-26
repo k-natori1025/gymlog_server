@@ -11,7 +11,7 @@ from app.auth.utils import is_user_exists, verify_session_cookie
 router = APIRouter()
 security = HTTPBearer()
 
-@router.post("/user/", tags=["ユーザー"], summary="ユーザーを登録する")
+@router.post("/user", tags=["ユーザー"], summary="ユーザー登録する")
 async def create_user(
     body: UserRegisterRequest,
     db: Session = Depends(get_db),
@@ -20,7 +20,7 @@ async def create_user(
     try:
         if is_user_exists(db, body.name):
             raise HTTPException(status_code=400, detail="Username already taken")
-        response = await user_repo.create(db, body)
+        response = await user_repo.create_user(db, body)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

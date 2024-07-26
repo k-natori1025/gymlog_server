@@ -3,16 +3,20 @@ from typing import Optional, Union
 from pydantic import BaseModel
 
 class UserBase(BaseModel):
+    firebase_uid: str
     name: str
-    email: str
+    email: Optional[str] = None
     class Config:
         orm_mode = True
 
 class UserRegisterRequest(UserBase):
-    password: str
+    email: Optional[str] = None
+    password: Optional[str] = None
+    google_id: Optional[str] = None
+    twitter_id: Optional[str] = None
 
 class UserRegisterResponse(UserBase):
-    pass
+    id: int
 
 class UserUpdate(UserBase):
     name: Optional[str] = None
@@ -32,9 +36,11 @@ class TokenData(BaseModel):
 
 class User(BaseModel):
     id: int
+    firebase_id: int
     name: str
     email: Union[str, None] = None
-    disabled: Union[bool, None] = None
+    google_id: Optional[str] = None
+    twitter_id: Optional[str] = None
     class Config:
         orm_mode = True
 

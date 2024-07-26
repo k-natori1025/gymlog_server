@@ -36,3 +36,13 @@ class Env:
      "universe_domain": _getenv("FIREBASE_UNIVERSE_DOMAIN"), 
   }
 
+  # OpenAI関連
+  OPENAI_API_KEY = _getenv("OPENAI_API_KEY")
+
+  # テストアカウント関連
+  TEST_USER1_FIREBASE_UID = _getenv("TEST_USER1_FIREBASE_UID")
+  TEST_USER2_FIREBASE_UID = _getenv("TEST_USER2_FIREBASE_UID")
+  TEST_USER3_FIREBASE_UID = _getenv("TEST_USER3_FIREBASE_UID")
+  TEST_USER4_FIREBASE_UID = _getenv("TEST_USER4_FIREBASE_UID")
+
+

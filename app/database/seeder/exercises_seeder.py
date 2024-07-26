@@ -1,5 +1,5 @@
 from app.settings.database import SessionLocal
-from app.models.exercises import ExercisesOrm
+from app.models.exercise import ExercisesOrm
 
 # シードデータ
 exercises = [

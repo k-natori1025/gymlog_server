@@ -53,7 +53,26 @@ def verify_session_cookie(session_cookie):
         decoded_token = firebase_auth.verify_session_cookie(session_cookie, check_revoked=True)
         uid = decoded_token["uid"]
         user = firebase_auth.get_user(uid)
-        return {"uid": uid, "email": user.email}
+        twitter_id = decoded_token.get('firebase', {}).get('identities', {}).get('twitter.com', [None])[0]
+        
+        return {
+            "uid": uid,
+            "email": user.email,
+            "twitter_id": twitter_id
+        }
     except Exception as e:
         print(f"Error verifying Session Cookie: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid Session Cookie")
+
+def get_user_info_from_token(decoded_token: dict) -> dict:
+    email = decoded_token.get('email')
+    name = decoded_token.get('name', '')
+    google_id = decoded_token.get('firebase', {}).get('identities', {}).get('google.com', [None])[0]
+    twitter_id = decoded_token.get('firebase', {}).get('identities', {}).get('twitter.com', [None])[0]
+    
+    return {
+        "email": email,
+        "name": name,
+        "google_id": google_id,
+        "twitter_id": twitter_id
+    }

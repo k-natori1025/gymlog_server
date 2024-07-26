@@ -13,6 +13,11 @@ shell:
 app-migrate:
 	docker compose exec api bash -c "cd app/database && poetry run alembic upgrade head"
 
+# マイグレーションファイル作成
+new-migration:
+	@read -p "Enter migration file name: " name; \
+	docker compose exec api bash -c "cd app/database && poetry run alembic revision -m \"$$name\""
+
 app-seeder:
 	docker compose exec api bash -c "cd app/database && poetry run python master_seeder.py"
 

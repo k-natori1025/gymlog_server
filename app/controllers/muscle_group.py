@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 
-from app.schemas.workout_log import WorkloutLogRequest
 from app.libraries.repositories.muscle_group import MuscleGroupRepository
 from app.settings.database import get_db
 

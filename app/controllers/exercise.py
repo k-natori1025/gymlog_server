@@ -16,7 +16,6 @@ async def get_exercises_by_id(
 ) -> List[ExerciseResponse]:
     try:
         response = await exercise_repo.get_exercises_by_muscle_group_id(db, muscle_group_id)
-        print(f"@@@@@最終的な取得結果:{response}@@@@@@")
         return response
     except HTTPException as e:
         print(f"HTTPエラー: {e.detail}")

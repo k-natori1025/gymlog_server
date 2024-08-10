@@ -1,20 +1,25 @@
-# from fastapi import Depends
-# from sqlalchemy import select
-# from sqlalchemy.orm import Session
+from fastapi import Depends
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-# from app.models.workout_log import WorkOutLogOrm
-# from app.schemas.workout_log import WorkloutLogRequest
+from app.models.workout_log import WorkOutLogOrm
+from app.schemas.workout_log import WorkoutLogRequest
 
-# class WorkoutLogRepository:
-#     async def create(self, db: Session, body: UserRegisterRequest)->UserRegisterResponse:        
-#         hashed_password = create_hashed_password(body.password)
-#         user = UserOrm(name=body.name, email=body.email, password=hashed_password)
-#         db.add(user)
-#         db.commit()
-#         return UserRegisterResponse.from_orm(user)
-    
-#     async def get_current_user(self, db: Session, email: str)->User:
-#         user_orm = db.scalar(select(UserOrm).where(UserOrm.email == email))
-#         if user_orm is None:
-#             return None
-#         return User.from_orm(user_orm)
+class WorkoutLogRepository:
+    async def create_workout_log(self, db: Session, body: WorkoutLogRequest, user_id: int):
+        try:
+            workout_log = WorkOutLogOrm(
+                exercise_id=body.exercise_id,
+                muscle_group_id=body.muscle_group_id,
+                user_id=user_id,
+                weight=body.weight, 
+                reps=body.reps,
+                sets=body.sets,
+            )
+            db.add(workout_log) 
+            db.commit()
+            db.refresh(workout_log)
+            return workout_log
+        except Exception as e:
+            print(f"Error creating workout log: {e}")
+            raise e

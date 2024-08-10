@@ -1,13 +1,15 @@
 from pydantic import BaseModel
 from typing import List, Union
 
-class WorkloutLogRequest(BaseModel):
+class WorkoutLogRequest(BaseModel):
     exercise_id: int
     muscle_group_id: int
-    user_id: int
     weight: int
     reps: int
     sets: int
 
-class AICoachResponse(BaseModel):
-    ai_response: str
+class WorkoutLogResponse(WorkoutLogRequest):
+    id: int
+
+    class Config:
+        or_mode = True

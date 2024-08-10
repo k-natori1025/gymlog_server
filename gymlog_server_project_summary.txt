@@ -61,7 +61,11 @@
         - user.py
         - workout_log.py
         - __pycache__/
+          - exercise.cpython-311.pyc (binary file)
           - user.cpython-311.pyc (binary file)
+          - muscle_group.cpython-311.pyc (binary file)
+          - workout_log.cpython-311.pyc (binary file)
+        - exercise.py
         - muscle_group.py
       - usecases/
         - ai_coach/
@@ -73,7 +77,9 @@
           - login_user.py
           - __pycache__/
             - create_user.cpython-311.pyc (binary file)
+            - get_current_user.cpython-311.pyc (binary file)
             - login_user.cpython-311.pyc (binary file)
+          - get_current_user.py
         - workout_log/
     - models/
       - user.py
@@ -83,6 +89,7 @@
         - exercise.cpython-311.pyc (binary file)
         - user.cpython-311.pyc (binary file)
         - muscle_group.cpython-311.pyc (binary file)
+        - workout_log.cpython-311.pyc (binary file)
       - exercise.py
       - muscle_group.py
     - __pycache__/
@@ -94,7 +101,10 @@
       - user.py
       - workout_log.py
       - __pycache__/
+        - exercise.cpython-311.pyc (binary file)
         - user.cpython-311.pyc (binary file)
+        - muscle_group.cpython-311.pyc (binary file)
+        - workout_log.cpython-311.pyc (binary file)
         - ai_coach.cpython-311.pyc (binary file)
       - exercise.py
       - ai_coach.py
@@ -105,7 +115,10 @@
       - user.py
       - workout_log.py
       - __pycache__/
+        - exercise.cpython-311.pyc (binary file)
         - user.cpython-311.pyc (binary file)
+        - muscle_group.cpython-311.pyc (binary file)
+        - workout_log.cpython-311.pyc (binary file)
         - ai_coach.cpython-311.pyc (binary file)
       - exercise.py
       - ai_coach.py
@@ -232,6 +245,13 @@ class Env:
   # OpenAI関連
   OPENAI_API_KEY = _getenv("OPENAI_API_KEY")
 
+  # テストアカウント関連
+  TEST_USER1_FIREBASE_UID = _getenv("TEST_USER1_FIREBASE_UID")
+  TEST_USER2_FIREBASE_UID = _getenv("TEST_USER2_FIREBASE_UID")
+  TEST_USER3_FIREBASE_UID = _getenv("TEST_USER3_FIREBASE_UID")
+  TEST_USER4_FIREBASE_UID = _getenv("TEST_USER4_FIREBASE_UID")
+
+
 
 ```
 
@@ -271,11 +291,14 @@ def get_db():
 ```
 from fastapi import FastAPI
 
-from app.controllers import user, ai_coach
+from app.controllers import user, ai_coach, muscle_group, exercise, workout_log
 
 def init_route(app: FastAPI) -> None:
   app.include_router(user.router)
   app.include_router(ai_coach.router)
+  app.include_router(muscle_group.router)
+  app.include_router(exercise.router)
+  app.include_router(workout_log.router)
 
 ```
 
@@ -343,12 +366,14 @@ muscle_groups_seeder()
 ```
 from app.settings.database import SessionLocal
 from app.models.user import UserOrm
+from app.settings.env import Env
 
 # シードデータ
 test_users = [
-    {"name": "test_user1", "email": "test1@test.com", "password": "hashed_password1"},
-    {"name": "test_user2", "email": "test2@test.com", "password": "hashed_password2"},
-    {"name": "test_user3", "email": "test3@test.com", "password": "hashed_password3"},
+    {"firebase_uid": Env.TEST_USER1_FIREBASE_UID, "name": "test_user1", "email": "test1@test.com", "password": "hashed_password1"},
+    {"firebase_uid": Env.TEST_USER2_FIREBASE_UID, "name": "test_user2", "email": "test2@test.com", "password": "hashed_password2"},
+    {"firebase_uid": Env.TEST_USER3_FIREBASE_UID, "name": "test_user3", "email": "test3@test.com", "password": "hashed_password3"},
+    {"firebase_uid": Env.TEST_USER4_FIREBASE_UID, "name": "test_user4", "email": "test4@test.com", "password": "hashed_password4"},
 ]
 
 def test_users_seeder():
@@ -787,6 +812,7 @@ def upgrade() -> None:
     op.create_table(
         'users',
         sa.Column('id', sa.BigInteger, primary_key=True, nullable=False, autoincrement=True),
+        sa.Column('firebase_uid', sa.String(255), unique=True, nullable=False, index=True),
         sa.Column('name', sa.String(255), unique=True, nullable=False),
         sa.Column('email', sa.String(255), unique=True, nullable=True),
         sa.Column('password', sa.String(255), nullable=True),
@@ -952,7 +978,13 @@ def verify_session_cookie(session_cookie):
         decoded_token = firebase_auth.verify_session_cookie(session_cookie, check_revoked=True)
         uid = decoded_token["uid"]
         user = firebase_auth.get_user(uid)
-        return {"uid": uid, "email": user.email}
+        twitter_id = decoded_token.get('firebase', {}).get('identities', {}).get('twitter.com', [None])[0]
+        
+        return {
+            "uid": uid,
+            "email": user.email,
+            "twitter_id": twitter_id
+        }
     except Exception as e:
         print(f"Error verifying Session Cookie: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid Session Cookie")
@@ -982,12 +1014,13 @@ from app.schemas.user import User, UserRegisterRequest, UserRegisterResponse
 from app.auth.utils import create_hashed_password
 
 class UserRepository:
-    async def create(self, db: Session, body: UserRegisterRequest)->UserRegisterResponse:
+    async def create_user(self, db: Session, body: UserRegisterRequest)->UserRegisterResponse:
         hashed_password = None
         # パスワードをハッシュ化
         if body.password:
             hashed_password = create_hashed_password(body.password)
         user = UserOrm(
+            firebase_uid=body.firebase_uid,
             name=body.name, 
             email=body.email, 
             password=hashed_password,
@@ -998,22 +1031,11 @@ class UserRepository:
         db.commit()
         return UserRegisterResponse.from_orm(user)
     
-    async def get_current_user(
+    async def get_current_user_by_firebase_uid(
             self, db: Session, 
-            email: str = None, 
-            google_id: str = None, 
-            twitter_id: str = None
+            firebase_uid: str = None
     )->User:
-        query = select(UserOrm)
-        if email:
-            query = query.where(UserOrm.email == email)
-        elif google_id:
-            query = query.where(UserOrm.google_id == google_id)
-        elif twitter_id:
-            query = query.where(UserOrm.twitter_id == twitter_id)
-        else:
-            return None
-        user_orm = db.scalar(query)
+        user_orm = db.scalar(select(UserOrm).where(UserOrm.firebase_uid == firebase_uid))
         if user_orm is None:
             return None
         return User.from_orm(user_orm)
@@ -1028,21 +1050,38 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.workout_log import WorkOutLogOrm
-from app.schemas.workout_log import WorkloutLogRequest
+from app.schemas.workout_log import WorkoutLogRequest
 
 class WorkoutLogRepository:
-    async def create(self, db: Session, body: UserRegisterRequest)->UserRegisterResponse:        
-        hashed_password = create_hashed_password(body.password)
-        user = UserOrm(name=body.name, email=body.email, password=hashed_password)
-        db.add(user)
+    async def create_workout_log(self, db: Session, body: WorkoutLogRequest, user_id: int):        
+        workout_log = WorkOutLogOrm(
+            exercise_id=body.exercise_id,
+            muscle_group_id=body.muscle_group_id,
+            user_id=user_id,
+            weight=body.weight, 
+            reps=body.reps,
+            sets=body.sets,
+        )
+        db.add(workout_log) 
         db.commit()
-        return UserRegisterResponse.from_orm(user)
-    
-    async def get_current_user(self, db: Session, email: str)->User:
-        user_orm = db.scalar(select(UserOrm).where(UserOrm.email == email))
-        if user_orm is None:
-            return None
-        return User.from_orm(user_orm)
+        return 
+
+```
+
+### app/libraries/repositories/exercise.py
+
+```
+from typing import List
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models.exercise import ExercisesOrm
+from app.schemas.exercise import ExerciseResponse
+
+class ExerciseRepository:
+    async def get_exercises_by_muscle_group_id(self, db: Session, muscle_group_id: int) -> List[ExerciseResponse]:
+        exercises = db.scalars(select(ExercisesOrm).where(ExercisesOrm.muscle_group_id == muscle_group_id)).all()
+        return [ExerciseResponse.from_orm(exercise) for exercise in exercises]
 
 ```
 
@@ -1057,7 +1096,7 @@ from app.schemas.muscle_group import MuscleGroupResponse
 
 class MuscleGroupRepository:
     async def get_muscle_groups(self, db: Session)->MuscleGroupResponse:
-        return db.scalars(select(MuscleGroupOrm).all())
+        return db.scalars(select(MuscleGroupOrm)).all()
 
 ```
 
@@ -1136,15 +1175,11 @@ class LoginUserUsecase:
             session_cookie = create_session_cookie(token, expires_in)            
             expires = datetime.now(timezone.utc) + expires_in
 
-            print(f"decoded_token:@@@@@{decoded_token}@@@@@")
-
             email = decoded_token.get('email')
             google_id = decoded_token.get('firebase', {}).get('identities', {}).get('google.com', [None])[0]
             twitter_id = decoded_token.get('firebase', {}).get('identities', {}).get('twitter.com', [None])[0]
             
             user_info = get_user_info_from_token(decoded_token)
-
-            print(f"user_info:@@@@@{user_info}@@@@@")
 
             login_type = self._get_login_type(user_info)
             
@@ -1167,7 +1202,7 @@ class LoginUserUsecase:
                         google_id=user_info['google_id'],
                         twitter_id=user_info['twitter_id']
                     )
-                    user = await self.user_repo.create(db, user_data)
+                    user = await self.user_repo.create_user(db, user_data)
 
             # セッションクッキーをレスポンスに設定
             response.set_cookie(
@@ -1196,6 +1231,55 @@ class LoginUserUsecase:
 
 ```
 
+### app/libraries/usecases/user/get_current_user.py
+
+```
+from sqlalchemy.orm import Session
+from fastapi import Depends, HTTPException, status, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from app.settings.database import get_db
+from app.libraries.repositories.user import UserRepository
+from app.auth.utils import verify_session_cookie
+
+security = HTTPBearer()
+
+class GetCurrentUserUseCase:
+  def __init__(self, user_repo: UserRepository = Depends()):
+      self.user_repo = user_repo
+  
+  async def exec(
+      self, 
+      db: Session = Depends(get_db),
+      token: HTTPAuthorizationCredentials = Depends(security), 
+  ):
+      try:
+          print(f"@@@token:{token}@@@")
+          print("@@@@@@@@")
+          print(dir(token))
+          print("@@@@@@@@")
+          print(f"Token scheme: {token.scheme}")
+          print(f"Token credentials: {token.credentials}")
+          print("@@@@@@@@")
+          user_info = verify_session_cookie(token.credentials)
+          print(f"@@@@{user_info}@@@@")
+          user = await self.user_repo.get_current_user_by_firebase_uid(db, firebase_uid=user_info["firebase_uid"])
+          print(f"@@@@{user}@@@@")
+          if user is None:
+              raise HTTPException(
+                  status_code=status.HTTP_404_NOT_FOUND,
+                  detail="User not found",
+              )
+          return user
+      except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+```
+
 ### app/models/user.py
 
 ```
@@ -1208,6 +1292,7 @@ class UserOrm(Base):
   __tablename__ = "users"
 
   id = Column(BigInteger, primary_key=True, nullable=False, autoincrement=True, index=True)
+  firebase_uid = Column(String(255), unique=True, nullable=False, index=True)
   name = Column(String(255), unique=True, nullable=False)
   email = Column(String(255), unique=True, nullable=True)
   password = Column(String(255), nullable=True)
@@ -1286,7 +1371,9 @@ from typing import Optional, Union
 from pydantic import BaseModel
 
 class UserBase(BaseModel):
+    firebase_uid: str
     name: str
+    email: Optional[str] = None
     class Config:
         orm_mode = True
 
@@ -1317,6 +1404,7 @@ class TokenData(BaseModel):
 
 class User(BaseModel):
     id: int
+    firebase_id: int
     name: str
     email: Union[str, None] = None
     google_id: Optional[str] = None
@@ -1336,16 +1424,18 @@ class UserInDB(User):
 from pydantic import BaseModel
 from typing import List, Union
 
-class WorkloutLogRequest(BaseModel):
+class WorkoutLogRequest(BaseModel):
     exercise_id: int
     muscle_group_id: int
-    user_id: int
     weight: int
     reps: int
     sets: int
 
-class AICoachResponse(BaseModel):
-    ai_response: str
+class WorkoutLogResponse(WorkoutLogRequest):
+    id: int
+
+    class Config:
+        or_mode = True
 
 ```
 
@@ -1358,6 +1448,9 @@ class ExerciseResponse(BaseModel):
     id: int
     name: str
     muscle_group_id: str
+
+    class Config:
+        orm_mode = True
 
 ```
 
@@ -1439,7 +1532,7 @@ from app.auth.utils import is_user_exists, verify_session_cookie
 router = APIRouter()
 security = HTTPBearer()
 
-@router.post("/user", tags=["ユーザー"], summary="ユーザーを登録する")
+@router.post("/user", tags=["ユーザー"], summary="ユーザー登録する")
 async def create_user(
     body: UserRegisterRequest,
     db: Session = Depends(get_db),
@@ -1448,7 +1541,7 @@ async def create_user(
     try:
         if is_user_exists(db, body.name):
             raise HTTPException(status_code=400, detail="Username already taken")
-        response = await user_repo.create(db, body)
+        response = await user_repo.create_user(db, body)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1491,19 +1584,23 @@ async def session(
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 
-from app.schemas.workout_log import WorkloutLogRequest
-from app.libraries.usecases.ai_coach.create_ai_advise import CreateAIAdviseUsecase
 from app.settings.database import get_db
+from app.schemas.workout_log import WorkoutLogRequest
+from app.libraries.usecases.user.get_current_user import GetCurrentUserUseCase
+from app.libraries.repositories.workout_log import WorkoutLogRepository
 
 router = APIRouter()
 
-@router.post("/workout", tags=["workout"], summary="ワークアウトを記録する")
+@router.post("/workout_log", tags=["workout_log"], summary="ワークアウトを記録する")
 async def create_workout_log(
-    request: AICoachRequest,
-    create_ai_advise_usecase: CreateAIAdviseUsecase = Depends()
+    request: WorkoutLogRequest,
+    get_current_user_usecase: GetCurrentUserUseCase = Depends(),
+    workout_log_repo: WorkoutLogRepository = Depends(),
+    db: Session = Depends(get_db),
 ):
     try:
-        response = await create_ai_advise_usecase.exec(request)
+        current_user = await get_current_user_usecase.exec(db)
+        response = await workout_log_repo.create_workout_log(request, current_user.id)
         print(f"ハンドラーレスポンス結果:{response}")
         return response
     except HTTPException as e:
@@ -1515,22 +1612,24 @@ async def create_workout_log(
 ### app/controllers/exercise.py
 
 ```
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 
-from app.schemas.workout_log import WorkloutLogRequest
-from app.libraries.repositories.muscle_group import MuscleGroupRepository
+from app.schemas.exercise import ExerciseResponse
+from app.libraries.repositories.exercise import ExerciseRepository
 from app.settings.database import get_db
 
 router = APIRouter()
 
-@router.get("/muscle_groups", tags=["muscle_group"], summary="部位の全件取得")
-async def get_muscle_groups(
+@router.get("/exercises", tags=["exercises"], summary="種目全件取得者")
+async def get_exercises_by_id(
+    muscle_group_id: int,
     db: Session = Depends(get_db),
-    muscle_group_repo: MuscleGroupRepository = Depends()
-):
+    exercise_repo: ExerciseRepository = Depends()
+) -> List[ExerciseResponse]:
     try:
-        response = await muscle_group_repo.get_muscle_groups(db)
+        response = await exercise_repo.get_exercises_by_muscle_group_id(db, muscle_group_id)
         return response
     except HTTPException as e:
         print(f"HTTPエラー: {e.detail}")
@@ -1570,7 +1669,6 @@ async def get_ai_coach_advice(
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 
-from app.schemas.workout_log import WorkloutLogRequest
 from app.libraries.repositories.muscle_group import MuscleGroupRepository
 from app.settings.database import get_db
 

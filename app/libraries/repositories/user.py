@@ -5,9 +5,13 @@ from app.schemas.user import User, UserRegisterRequest, UserRegisterResponse
 from app.auth.utils import create_hashed_password
 
 class UserRepository:
-    async def create_user(self, db: Session, body: UserRegisterRequest)->UserRegisterResponse:
+    async def create_user(
+            self, 
+            db: Session, 
+            body: UserRegisterRequest
+    )->UserRegisterResponse:
         hashed_password = None
-        # パスワードをハッシュ化
+        # メールでログインの場合のパスワードをハッシュ化
         if body.password:
             hashed_password = create_hashed_password(body.password)
         user = UserOrm(
@@ -23,7 +27,8 @@ class UserRepository:
         return UserRegisterResponse.from_orm(user)
     
     async def get_current_user_by_firebase_uid(
-            self, db: Session, 
+            self, 
+            db: Session, 
             firebase_uid: str = None
     )->User:
         user_orm = db.scalar(select(UserOrm).where(UserOrm.firebase_uid == firebase_uid))

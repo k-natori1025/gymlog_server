@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
-from app.schemas.user import UserRegisterRequest, TokenForm
+from app.schemas.user import UserRegisterRequest
 from app.libraries.usecases.user.login_user import LoginUserUsecase
 from app.libraries.repositories.user import UserRepository
 from app.settings.database import get_db

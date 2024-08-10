@@ -25,10 +25,6 @@ initialize_firebase()
 def create_hashed_password(password) -> str:
     return pwd_context.hash(password)
 
-# ユーザー認証機能はfirebaseで行うためパスワードの検証は必要なし
-# def verify_password(plain_password, hashed_password):
-#     return pwd_context.verify(plain_password, hashed_password)
-
 # ユーザー名既存ユーザーにいるかどうかのチェック
 def is_user_exists(db: Session, name: str) -> bool:
     user = db.scalar(select(UserOrm).where(UserOrm.name == name))

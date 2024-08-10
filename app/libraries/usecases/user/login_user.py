@@ -17,19 +17,15 @@ class LoginUserUsecase:
             session_cookie = create_session_cookie(token, expires_in)            
             expires = datetime.now(timezone.utc) + expires_in
 
-            email = decoded_token.get('email')
-            google_id = decoded_token.get('firebase', {}).get('identities', {}).get('google.com', [None])[0]
-            twitter_id = decoded_token.get('firebase', {}).get('identities', {}).get('twitter.com', [None])[0]
-            
+            firebase_uid = decoded_token.get('uid')
+            print(f"@@@decoded_token{firebase_uid}@@@@")
             user_info = get_user_info_from_token(decoded_token)
 
             login_type = self._get_login_type(user_info)
             
-            user = await self.user_repo.get_current_user(
+            user = await self.user_repo.get_current_user_by_firebase_uid(
                 db, 
-                email=user_info['email'], 
-                google_id=user_info['google_id'], 
-                twitter_id=user_info['twitter_id']
+                firebase_uid, 
             )
 
             if user is None:
